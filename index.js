@@ -50,6 +50,7 @@ async function run() {
     const bidsCollection = db.collection('bids')
     const tutorsDb = client.db('tutors-db')
     const tutorsCollection = tutorsDb.collection('tutors')
+    const bookedCollection = tutorsDb.collection('booked')
     // generate jwt
     app.post('/jwt', async (req, res) => {
       const email = req.body
@@ -182,6 +183,7 @@ async function run() {
    // get a single job data by id from db
             app.get('/tutors/:id', async (req, res) => {
             const id = req.params.id;
+            console.log(id)
             const query = { _id: new ObjectId(id) };
             const result = await tutorsCollection.findOne(query);
             res.send(result);
@@ -201,30 +203,39 @@ async function run() {
       res.send(result)
     })
 
+
+
+        // save a booked data in db
+        app.post('/add-book', async (req, res) => {
+          const bookData = req.body
+          const result = await bookedCollection.insertOne(bookData)
+          console.log(result)
+          res.send(result)
+        })
+    
+
     // save a bid data in db
-    app.post('/add-bid', async (req, res) => {
-      const bidData = req.body
+    // app.post('/add-book', async (req, res) => {
+    //   const bookData = req.body
       // 0. if a user placed a bid already in this job
-      const query = { email: bidData.email, jobId: bidData.jobId }
-      const alreadyExist = await bidsCollection.findOne(query)
-      console.log('If already exist-->', alreadyExist)
-      if (alreadyExist)
-        return res
-          .status(400)
-          .send('You have already placed a bid on this job!')
+      // const query = { email: bidData.email, jobId: bidData.jobId }
+      // const alreadyExist = await bidsCollection.findOne(query)
+      // console.log('If already exist-->', alreadyExist)
+      // if (alreadyExist)
+      //   return res
+      //     .status(400)
+      //     .send('You have already placed a bid on this job!')
       // 1. Save data in bids collection
-
-      const result = await bidsCollection.insertOne(bidData)
-
+      // const result = await bidsCollection.insertOne(bookData)
       // 2. Increase bid count in jobs collection
-      const filter = { _id: new ObjectId(bidData.jobId) }
-      const update = {
-        $inc: { bid_count: 1 },
-      }
-      const updateBidCount = await jobsCollection.updateOne(filter, update)
-      console.log(updateBidCount)
-      res.send(result)
-    })
+      // const filter = { _id: new ObjectId(bookData.tutorId) }
+      // const update = {
+      //   $inc: { bid_count: 1 },
+      // }
+      // const updateBidCount = await jobsCollection.updateOne(filter, update)
+      // console.log(updateBidCount)
+    //   res.send(result)
+    // })
 
     // get all bids for a specific user
     app.get('/bids/:email', verifyToken, async (req, res) => {
