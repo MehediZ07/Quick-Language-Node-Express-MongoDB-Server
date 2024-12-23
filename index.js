@@ -100,6 +100,20 @@ async function run() {
       res.send(result)
     })
 
+
+    app.get('/tutor', async (req, res) => {
+      const id = req.query.id; 
+      const query = { _id: new ObjectId(id) };
+      const result = await tutorsCollection.findOne(query);
+      res.send(result);
+    });
+
+
+
+
+
+
+
     // get all jobs posted by a specific user
     app.get('/tutors/:email', verifyToken, async (req, res) => {
       const email = req.params.email
@@ -108,10 +122,45 @@ async function run() {
       // console.log('email from params-->', email)
       if (decodedEmail !== email)
         return res.status(401).send({ message: 'unauthorized access' })
-      const query = { 'email': email }
+       const id = req.query.id  
+  let query = { email: email }
+
+  if (id) {
+    query = {
+      ...query,
+      _id: new ObjectId(id),  
+    }}
       const result = await tutorsCollection.find(query).toArray()
       res.send(result)
     })
+
+
+ // Import ObjectId to work with MongoDB ObjectIds
+
+// app.get('/tutors/:email', verifyToken, async (req, res) => {
+//   const email = req.params.email
+//   const decodedEmail = req.user?.email
+
+//   if (decodedEmail !== email)
+//     return res.status(401).send({ message: 'Unauthorized access' })
+//   const id = req.query.id  
+//   let query = { email: email }
+
+//   if (id) {
+//     query = {
+//       ...query,
+//       _id: new ObjectId(id),  
+//     }
+//   }
+//   try {
+//     const result = await tutorsCollection.find(query).toArray()
+//     res.send(result)
+//   } catch (err) {
+//     console.error(err)
+//     res.status(500).send({ message: 'Error retrieving tutors' })
+//   }
+// })
+
 
     // delete a job from db
     app.delete('/tutors/:id', verifyToken, async (req, res) => {
@@ -122,12 +171,21 @@ async function run() {
     })
 
     // get a single job data by id from db
-    app.get('/tutors/:id', async (req, res) => {
+    app.get('/job/:id', async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await tutorsCollection.findOne(query)
       res.send(result)
     })
+
+
+   // get a single job data by id from db
+            app.get('/tutors/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await tutorsCollection.findOne(query);
+            res.send(result);
+        })
 
     // save a jobData in db
     app.put('/update-tutors/:id', async (req, res) => {
@@ -233,7 +291,7 @@ async function run() {
     
       let query = {};
     
-      // Search filter (case-insensitive)
+
       if (search) {
         query.language = { $regex: search, $options: "i" };
       }
