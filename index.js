@@ -222,34 +222,9 @@ async function run() {
           res.send(result)
         })
     
-
-        // app.post('/add-bid', async (req, res) => {
-        //   const bidData = req.body
-    
-        //   const query = { email: bidData.email, jobId: bidData.jobId }
-        //   const alreadyExist = await bidsCollection.findOne(query)
-        //   console.log('If already exist-->', alreadyExist)
-        //   if (alreadyExist)
-        //     return res
-        //       .status(400)
-        //       .send('You have already placed a bid on this job!')
-          // 1. Save data in bids collection
-    
-          // const result = await bidsCollection.insertOne(bidData)
-    
-          // 2. Increase bid count in jobs collection
-        //   const filter = { _id: new ObjectId(bidData.jobId) }
-        //   const update = {
-        //     $inc: { bid_count: 1 },
-        //   }
-        //   const updateBidCount = await jobsCollection.updateOne(filter, update)
-        //   console.log(updateBidCount)
-        //   res.send(result)
-        // })
-
     // get all bids for a specific user
-    app.get('/bids/:email', verifyToken, async (req, res) => {
-      const isBuyer = req.query.buyer
+    app.get('/booked/:email', verifyToken, async (req, res) => {
+      const isUser = req.query.email
       const email = req.params.email
       const decodedEmail = req.user?.email
       // console.log('email from token-->', decodedEmail)
@@ -258,15 +233,72 @@ async function run() {
         return res.status(401).send({ message: 'unauthorized access' })
 
       let query = {}
-      if (isBuyer) {
-        query.buyer = email
+      if (isUser) {
+        query.email = email
       } else {
         query.email = email
       }
-
-      const result = await bidsCollection.find(query).toArray()
+      const result = await bookedCollection.find(query).toArray()
       res.send(result)
     })
+
+
+
+     // 2. Increase bid count in jobs collection
+    app.patch('/review-turorial/:id', async (req, res) => {
+      const id = req.params.id
+      const data = req.body
+      const jobData = req.body
+      const updated = {
+        $set: jobData,
+      }
+      const filter = { _id: new ObjectId(data.tutorId) }
+      const update = {
+        $inc: { review: 1 },
+        $set: jobData,
+      }
+      const updateBidCount = await tutorsCollection.updateOne(filter, update)
+      console.log(updateBidCount)
+      res.send(result)
+ 
+    })
+
+
+
+
+    app.put('/add-review', async (req, res) => {
+      const { name, image, email, rating, comment, tutorId } = req.body;
+      const review = {
+        name,
+        image,
+        email,
+        rating,
+        comment,
+        date: new Date(),
+      };
+    
+      try {
+        const filter = { _id: new ObjectId(tutorId) };
+    
+        const existingTutor = await tutorsCollection.findOne(filter);
+    
+        if (existingTutor) {
+          const update = {
+            $push: { allReviews: review },
+            $inc: { review: 1 },
+          };
+    
+          const result = await tutorsCollection.updateOne(filter, update);
+          res.send({ success: true, message: 'Review added', result });
+        } else {
+          res.status(404).send({ success: false, message: 'Tutor not found' });
+        }
+      } catch (error) {
+        res.status(500).send({ success: false, error: 'Failed to add review', details: error.message });
+      }
+    });
+    
+  
 
     // update bid status
     app.patch('/bid-status-update/:id', async (req, res) => {
