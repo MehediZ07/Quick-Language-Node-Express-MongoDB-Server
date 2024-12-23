@@ -86,6 +86,185 @@ async function run() {
       res.send(result)
     })
 
+    // save a jobData in db
+    app.post('/add-job', async (req, res) => {
+      const jobData = req.body
+      const result = await jobsCollection.insertOne(jobData)
+      console.log(result)
+      res.send(result)
+    })
+
+    // get all jobs data from db
+    app.get('/tutors', async (req, res) => {
+      const result = await tutorsCollection.find().toArray()
+      res.send(result)
+    })
+
+    // get all jobs posted by a specific user
+    app.get('/tutors/:email', verifyToken, async (req, res) => {
+      const email = req.params.email
+      const decodedEmail = req.user?.email
+      // console.log('email from token-->', decodedEmail)
+      // console.log('email from params-->', email)
+      if (decodedEmail !== email)
+        return res.status(401).send({ message: 'unauthorized access' })
+      const query = { 'email': email }
+      const result = await tutorsCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // delete a job from db
+    app.delete('/tutors/:id', verifyToken, async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await tutorsCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    // get a single job data by id from db
+    app.get('/job/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await jobsCollection.findOne(query)
+      res.send(result)
+    })
+
+    // save a jobData in db
+    app.put('/update-job/:id', async (req, res) => {
+      const id = req.params.id
+      const jobData = req.body
+      const updated = {
+        $set: jobData,
+      }
+      const query = { _id: new ObjectId(id) }
+      const options = { upsert: true }
+      const result = await jobsCollection.updateOne(query, updated, options)
+      console.log(result)
+      res.send(result)
+    })
+
+    // save a bid data in db
+    app.post('/add-bid', async (req, res) => {
+      const bidData = req.body
+      // 0. if a user placed a bid already in this job
+      const query = { email: bidData.email, jobId: bidData.jobId }
+      const alreadyExist = await bidsCollection.findOne(query)
+      console.log('If already exist-->', alreadyExist)
+      if (alreadyExist)
+        return res
+          .status(400)
+          .send('You have already placed a bid on this job!')
+      // 1. Save data in bids collection
+
+      const result = await bidsCollection.insertOne(bidData)
+
+      // 2. Increase bid count in jobs collection
+      const filter = { _id: new ObjectId(bidData.jobId) }
+      const update = {
+        $inc: { bid_count: 1 },
+      }
+      const updateBidCount = await jobsCollection.updateOne(filter, update)
+      console.log(updateBidCount)
+      res.send(result)
+    })
+
+    // get all bids for a specific user
+    app.get('/bids/:email', verifyToken, async (req, res) => {
+      const isBuyer = req.query.buyer
+      const email = req.params.email
+      const decodedEmail = req.user?.email
+      // console.log('email from token-->', decodedEmail)
+      // console.log('email from params-->', email)
+      if (decodedEmail !== email)
+        return res.status(401).send({ message: 'unauthorized access' })
+
+      let query = {}
+      if (isBuyer) {
+        query.buyer = email
+      } else {
+        query.email = email
+      }
+
+      const result = await bidsCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // update bid status
+    app.patch('/bid-status-update/:id', async (req, res) => {
+      const id = req.params.id
+      const { status } = req.body
+
+      const filter = { _id: new ObjectId(id) }
+      const updated = {
+        $set: { status },
+      }
+      const result = await bidsCollection.updateOne(filter, updated)
+      res.send(result)
+    })
+
+   // product count
+   app.get('/tutorsCount', async (req, res) => {
+    try {
+      const filter = req.query.filter; 
+      const search = req.query.search; 
+      // Build the query object dynamically
+      let query = {};
+      if (filter) query.category = filter; 
+      if (search) query.title = { $regex: search, $options: 'i' }; 
+      // Count the documents matching the query
+      const count = await tutorsCollection.countDocuments(query);
+      res.send({ count });
+    } catch (error) {
+      res.status(500).send({ error: 'Failed to fetch jobs count' });
+    }
+  });
+  
+
+        // const sort = req.query.sort
+      // if (sort) options = { sort: { deadline: sort === 'asc' ? 1 : -1 } }
+
+    // get all jobs
+    app.get('/all-tutors', async (req, res) => {
+      const filter = req.query.filter || null;
+      const search = req.query.search || "";
+      const page = Math.max(0, parseInt(req.query.page) || 0); // Ensure non-negative
+      const size = Math.max(1, parseInt(req.query.size) || 10); // Minimum 1 item per page
+      const sort = req.query.sort;
+    
+      let query = {};
+    
+      // Search filter (case-insensitive)
+      if (search) {
+        query.language = { $regex: search, $options: "i" };
+      }
+    
+      // Exact filter match
+      if (filter) {
+        query.language = filter;
+      }
+    
+      try {
+        // Determine sorting logic
+        const sortOptions = sort ? { price: sort === "asc" ? 1 : -1 } : {};
+    
+        // Fetch paginated and sorted results
+        const result = await tutorsCollection
+          .find(query)
+          .sort(sortOptions) // Apply sorting
+          .skip(page * size) // Pagination: skip items
+          .limit(size) // Pagination: limit items
+          .toArray();
+    
+        // Count total matching items
+        const totalCount = await tutorsCollection.countDocuments(query);
+    
+        res.send({ result, totalCount });
+      } catch (error) {
+        console.error("Error fetching tutors:", error);
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
+    
     
     
 
