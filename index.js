@@ -51,6 +51,7 @@ async function run() {
     const tutorsDb = client.db('tutors-db')
     const tutorsCollection = tutorsDb.collection('tutors')
     const bookedCollection = tutorsDb.collection('booked')
+    const userCollection = tutorsDb.collection('users');
     // generate jwt
     app.post('/jwt', async (req, res) => {
       const email = req.body
@@ -78,6 +79,21 @@ async function run() {
         })
         .send({ success: true })
     })
+
+
+        // Users related apis
+        app.get('/users', async (req, res) => {
+          const cursor = userCollection.find();
+          const result = await cursor.toArray();
+          res.send(result);
+      })
+
+      app.post('/users', async (req, res) => {
+          const newUser = req.body;
+          const result = await userCollection.insertOne(newUser);
+          res.send(result);
+      });
+
 
     // save a tutors data in db
     app.post('/add-tutor', async (req, res) => {
