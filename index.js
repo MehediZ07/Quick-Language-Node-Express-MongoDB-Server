@@ -7,18 +7,20 @@ const port = process.env.PORT || 5000
 const app = express()
 const cookieParser = require('cookie-parser')
 const corsOptions = {
-  origin: ['http://localhost:5173'],
+  origin: ['http://localhost:5173',
+    'https://mz-quick-language.surge.sh',
+    'https://quick-language.web.app'
+  ],
   credentials: true,
-  optionalSuccessStatus: 200,
+  
 }
 
-app.use(cors(corsOptions))
+app.use (cors({origin:["http://localhost:5173","https://quick-language.web.app" ], credentials: true}))
 app.use(express.json())
 app.use(cookieParser())
 
-// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@main.yolij.mongodb.net/?retryWrites=true&w=majority&appName=Main`
 
-const uri = "mongodb+srv://Job-placement:VXeZLCLtg3SeekPh@cluster0.9yghi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.9yghi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -46,8 +48,7 @@ const verifyToken = (req, res, next) => {
 async function run() {
   try {
     const db = client.db('solo-db')
-    const jobsCollection = db.collection('jobs')
-    const bidsCollection = db.collection('bids')
+
     const tutorsDb = client.db('tutors-db')
     const tutorsCollection = tutorsDb.collection('tutors')
     const bookedCollection = tutorsDb.collection('booked')
@@ -59,7 +60,7 @@ async function run() {
       const token = jwt.sign(email, process.env.SECRET_KEY, {
         expiresIn: '365d',
       })
-      console.log(token)
+      // console.log(token)
       res
         .cookie('token', token, {
           httpOnly: true,
@@ -99,19 +100,13 @@ async function run() {
     app.post('/add-tutor', async (req, res) => {
       const tutorData = req.body
       const result = await tutorsCollection.insertOne(tutorData)
-      console.log(result)
+      // console.log(result)
       res.send(result)
     })
 
-    // save a jobData in db
-    app.post('/add-job', async (req, res) => {
-      const jobData = req.body
-      const result = await jobsCollection.insertOne(jobData)
-      console.log(result)
-      res.send(result)
-    })
 
-    // get all jobs data from db
+
+    // get all tutors data from db
     app.get('/tutors', async (req, res) => {
       const result = await tutorsCollection.find().toArray()
       res.send(result)
@@ -131,7 +126,7 @@ async function run() {
 
 
 
-    // get all jobs posted by a specific user
+    // get all tutors posted by a specific user
     app.get('/tutors/:email', verifyToken, async (req, res) => {
       const email = req.params.email
       const decodedEmail = req.user?.email
@@ -152,34 +147,8 @@ async function run() {
     })
 
 
- // Import ObjectId to work with MongoDB ObjectIds
 
-// app.get('/tutors/:email', verifyToken, async (req, res) => {
-//   const email = req.params.email
-//   const decodedEmail = req.user?.email
-
-//   if (decodedEmail !== email)
-//     return res.status(401).send({ message: 'Unauthorized access' })
-//   const id = req.query.id  
-//   let query = { email: email }
-
-//   if (id) {
-//     query = {
-//       ...query,
-//       _id: new ObjectId(id),  
-//     }
-//   }
-//   try {
-//     const result = await tutorsCollection.find(query).toArray()
-//     res.send(result)
-//   } catch (err) {
-//     console.error(err)
-//     res.status(500).send({ message: 'Error retrieving tutors' })
-//   }
-// })
-
-
-    // delete a job from db
+    // delete a tutors from db
     app.delete('/tutors/:id', verifyToken, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
@@ -187,25 +156,19 @@ async function run() {
       res.send(result)
     })
 
-    // get a single job data by id from db
-    app.get('/job/:id', async (req, res) => {
-      const id = req.params.id
-      const query = { _id: new ObjectId(id) }
-      const result = await tutorsCollection.findOne(query)
-      res.send(result)
-    })
 
 
-   // get a single job data by id from db
+
+   // get a single tutors data by id from db
             app.get('/tutors/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id)
+            // console.log(id)
             const query = { _id: new ObjectId(id) };
             const result = await tutorsCollection.findOne(query);
             res.send(result);
         })
 
-    // save a jobData in db
+    // save a tutorsData in db
     app.put('/update-tutors/:id', async (req, res) => {
       const id = req.params.id
       const jobData = req.body
@@ -215,7 +178,7 @@ async function run() {
       const query = { _id: new ObjectId(id) }
       const options = { upsert: true }
       const result = await tutorsCollection.updateOne(query, updated, options)
-      console.log(result)
+      // console.log(result)
       res.send(result)
     })
 
@@ -225,20 +188,20 @@ async function run() {
         app.post('/add-book', async (req, res) => {
           const bookData = req.body
           const query = { email: bookData.email, tutorId: bookData.tutorId }
-          console.log(query)
+         
         
           const alreadyExist = await bookedCollection.findOne(query)
-          console.log(alreadyExist)
+        
           if (alreadyExist)
             return res
               .status(400)
               .send('You have already Booked this tutorial');
           const result = await bookedCollection.insertOne(bookData)
-          console.log(result)
+         
           res.send(result)
         })
     
-    // get all bids for a specific user
+    // get all booked for a specific user
     app.get('/booked/:email', verifyToken, async (req, res) => {
       const isUser = req.query.email
       const email = req.params.email
@@ -274,7 +237,7 @@ async function run() {
         $set: jobData,
       }
       const updateBidCount = await tutorsCollection.updateOne(filter, update)
-      console.log(updateBidCount)
+      // console.log(updateBidCount)
       res.send(result)
  
     })
@@ -316,25 +279,13 @@ async function run() {
     
   
 
-    // update bid status
-    app.patch('/bid-status-update/:id', async (req, res) => {
-      const id = req.params.id
-      const { status } = req.body
-
-      const filter = { _id: new ObjectId(id) }
-      const updated = {
-        $set: { status },
-      }
-      const result = await bidsCollection.updateOne(filter, updated)
-      res.send(result)
-    })
 
    // product count
    app.get('/tutorsCount', async (req, res) => {
     try {
       const filter = req.query.filter; 
       const search = req.query.search; 
-      // Build the query object dynamically
+      
       let query = {};
       if (filter) query.category = filter; 
       if (search) query.title = { $regex: search, $options: 'i' }; 
@@ -347,10 +298,9 @@ async function run() {
   });
   
 
-        // const sort = req.query.sort
-      // if (sort) options = { sort: { deadline: sort === 'asc' ? 1 : -1 } }
+  
 
-    // get all jobs
+    // get all tutors
     app.get('/all-tutors', async (req, res) => {
       const filter = req.query.filter || null;
       const search = req.query.search || "";
@@ -396,10 +346,10 @@ async function run() {
     
 
     // Send a ping to confirm a successful connection
-    await client.db('admin').command({ ping: 1 })
-    console.log(
-      'Pinged your deployment. You successfully connected to MongoDB!'
-    )
+    // await client.db('admin').command({ ping: 1 })
+    // console.log(
+    //   'Pinged your deployment. You successfully connected to MongoDB!'
+    // )
   } finally {
     // Ensures that the client will close when you finish/error
   }
@@ -409,4 +359,4 @@ app.get('/', (req, res) => {
   res.send('Hello from SoloSphere Server....')
 })
 
-app.listen(port, () => console.log(`Server running on port ${port}`))
+app.listen(port)
