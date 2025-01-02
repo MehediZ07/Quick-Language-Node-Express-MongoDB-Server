@@ -222,6 +222,27 @@ async function run() {
     })
 
 
+    // get all booked for a specific user
+    app.get('/bookRequest/:email', verifyToken, async (req, res) => {
+      const isUser = req.query.email
+      const email = req.params.email
+      const decodedEmail = req.user?.email
+      // console.log('email from token-->', decodedEmail)
+      // console.log('email from params-->', email)
+      if (decodedEmail !== email)
+        return res.status(401).send({ message: 'unauthorized access' })
+
+      let query = {}
+      if (isUser) {
+        query.tutorEmail = email
+      } else {
+        query.tutorEmail = email
+      }
+      const result = await bookedCollection.find(query).toArray()
+      res.send(result)
+    })
+
+
 
      // 2. Increase bid count in jobs collection
     app.patch('/review-turorial/:id', async (req, res) => {
