@@ -90,10 +90,15 @@ async function run() {
       })
 
       app.post('/users', async (req, res) => {
-          const newUser = req.body;
-          const result = await userCollection.insertOne(newUser);
-          res.send(result);
-      });
+        const newUser = req.body;
+        const existingUser = await userCollection.findOne({ email: newUser.email }); 
+        if (existingUser) {
+            return res.send({ message: "User already exists", user: existingUser });
+        }
+        const result = await userCollection.insertOne(newUser);
+        res.send(result);
+    });
+    
 
 
     // save a tutors data in db
